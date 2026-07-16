@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { Op } from 'sequelize';
+import { assertJwtConfigured, getJwtSecret } from '../utils/jwt.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,7 +14,7 @@ const __dirname = path.dirname(__filename);
 
 // Generate JWT Token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id }, getJwtSecret(), {
     expiresIn: process.env.JWT_EXPIRE
   });
 };
@@ -631,6 +632,7 @@ export const verifyTwoFactorToken = async (req, res) => {
 // @access  Public
 export const login = async (req, res) => {
   try {
+    assertJwtConfigured();
     const { email, password } = req.body;
 
     // Check for user
@@ -685,7 +687,9 @@ export const login = async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: error.message?.includes('JWT_SECRET')
+        ? 'Server configuration error: JWT_SECRET is missing'
+        : 'Server error'
     });
   }
 };
@@ -694,7 +698,10 @@ export const login = async (req, res) => {
 // @route   POST /api/auth/register
 // @access  Public
 export const register = async (req, res) => {
+  let transaction;
+
   try {
+    assertJwtConfigured();
     const { username, email, password, phone } = req.body;
 
     // Check if user exists
@@ -706,13 +713,15 @@ export const register = async (req, res) => {
       });
     }
 
+    transaction = await User.sequelize.transaction();
+
     // Create user
     const user = await User.create({
       username,
       email,
       password_hash: password,
       phone
-    });
+    }, { transaction });
 
     // Create default settings for user
     await UserSetting.create({
@@ -721,10 +730,12 @@ export const register = async (req, res) => {
       sms_notifications: false,
       reminder_days_before: 1,
       currency: 'ZMW'
-    });
+    }, { transaction });
 
     // Generate token
     const token = generateToken(user.id);
+    await transaction.commit();
+    transaction = null;
 
     res.status(201).json({
       success: true,
@@ -738,10 +749,13 @@ export const register = async (req, res) => {
       }
     });
   } catch (error) {
+    if (transaction) await transaction.rollback();
     console.error('Registration error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: error.message?.includes('JWT_SECRET')
+        ? 'Server configuration error: JWT_SECRET is missing'
+        : 'Server error',
       error: error.message
     });
   }
@@ -1137,5 +1151,9 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+
+
+
+
 
 

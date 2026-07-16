@@ -1,6 +1,7 @@
 // middleware/authMiddleware.js
 import jwt from 'jsonwebtoken';
 import { User, SavingPlan, PlanMember } from '../models/Associations.js';
+import { getJwtSecret } from '../utils/jwt.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -22,7 +23,7 @@ export const protect = async (req, res, next) => {
       }
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key_here');
+      const decoded = jwt.verify(token, getJwtSecret());
 
       // Get user from token
       const user = await User.findByPk(decoded.id, {
@@ -278,7 +279,7 @@ export const requireAuth = async (req, res, next) => {
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key_here');
+    const decoded = jwt.verify(token, getJwtSecret());
     const user = await User.findByPk(decoded.id, {
       attributes: ['id', 'username', 'email']
     });
