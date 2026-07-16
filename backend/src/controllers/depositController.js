@@ -76,8 +76,8 @@ export const createDeposit = async (req, res) => {
       // Send notification to user
       await sendNotification(
         userId,
-        'Withdrawal Repayment',
-        `ZMW ${repayAmount.toFixed(2)} of your withdrawal from plan "${plan.plan_name}" has been repaid.`,
+        'Deposit Deduction',
+        `ZMW ${repayAmount.toFixed(2)} was deducted from your deposit to repay your withdrawal from plan "${plan.plan_name}".`,
         'success',
         `/plans/${plan_id}`
       );
@@ -129,8 +129,10 @@ export const createDeposit = async (req, res) => {
     } else {
       await sendNotification(
         userId,
-        'Deposit Recorded',
-        `Your deposit of ZMW ${depositAmount.toFixed(2)} to plan "${plan.plan_name}" has been recorded.`,
+        'Deposited',
+        repaymentDetails.length
+          ? `Deposited ZMW ${depositAmount.toFixed(2)} to plan "${plan.plan_name}". ZMW ${(depositAmount - remainingDeposit).toFixed(2)} was deducted for withdrawal repayment.`
+          : `Deposited ZMW ${depositAmount.toFixed(2)} to plan "${plan.plan_name}".`,
         'success',
         `/plans/${plan_id}`
       );

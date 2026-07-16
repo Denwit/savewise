@@ -706,6 +706,57 @@ class _PlanChatScreenState extends State<_PlanChatScreen> {
         return Colors.grey;
     }
   }
+
+  List<int> _messageIds(Object? value) {
+    if (value is! List) return const [];
+    return value.map(_toInt).where((id) => id > 0).toSet().toList();
+  }
+
+  Future<void> _showMessageInfo(Map<String, dynamic> message) async {
+    final readBy = _messageIds(message['read_by']);
+    final deliveredTo = _messageIds(message['delivered_to']);
+    final unread = deliveredTo.where((id) => !readBy.contains(id)).toList();
+
+    String listLabel(List<int> ids, String empty) =>
+        ids.isEmpty ? empty : ids.map((id) => 'User #$id').join(', ');
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Message info'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _InfoLine(
+              label: 'Read by (${readBy.length})',
+              value: listLabel(readBy, 'No reads yet'),
+              color: Colors.green,
+            ),
+            const SizedBox(height: 12),
+            _InfoLine(
+              label: 'Unread (${unread.length})',
+              value: listLabel(unread, 'Everyone delivered has read this message'),
+              color: Colors.amber,
+            ),
+            const SizedBox(height: 12),
+            _InfoLine(
+              label: 'Delivered to (${deliveredTo.length})',
+              value: listLabel(deliveredTo, 'Not delivered to other members yet'),
+              color: Colors.blueGrey,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   List<Map<String, dynamic>> _messages = [];
@@ -807,11 +858,39 @@ class _PlanChatScreenState extends State<_PlanChatScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    '${_text(user['username'], fallback: 'Member')} - ${formatSaveWiseDateTime(message['created_at'] ?? message['createdAt'])}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: isMine ? Colors.white70 : null,
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Flexible(
+                                        child: RichText(
+                                          text: TextSpan(
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: isMine ? Colors.white70 : Colors.black54,
+                                                ),
+                                            children: [
+                                              TextSpan(
+                                                text: _text(user['username'], fallback: 'Member'),
+                                                style: const TextStyle(fontWeight: FontWeight.w800),
+                                              ),
+                                              TextSpan(
+                                                text:
+                                                    ' - ${formatSaveWiseDateTime(message['created_at'] ?? message['createdAt'])}',
+                                              ),
+                                            ],
+                                          ),
                                         ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      InkWell(
+                                        onTap: () => _showMessageInfo(message),
+                                        child: Icon(
+                                          Icons.info_outline,
+                                          size: 16,
+                                          color: isMine ? Colors.white70 : Colors.black45,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(_text(message['message']),
@@ -1127,6 +1206,32 @@ class _ErrorCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.label, required this.value, required this.color});
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(value),
+      ],
     );
   }
 }

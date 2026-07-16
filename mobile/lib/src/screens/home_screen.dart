@@ -1762,6 +1762,27 @@ class _DepositFormState extends State<_DepositForm> {
   final _notes = TextEditingController();
   late int _planId = widget.plans.first.id;
   bool _saving = false;
+
+  SavingPlan get _selectedPlan => widget.plans.firstWhere(
+        (plan) => plan.id == _planId,
+        orElse: () => widget.plans.first,
+      );
+
+  String get _minimumDepositLabel => NumberFormat.currency(symbol: 'ZMW ', decimalDigits: 2)
+      .format(_selectedPlan.fixedAmount);
+
+  String? _validateDepositAmount(String? value) {
+    final base = _positiveNumber(value);
+    if (base != null) return base;
+    final amount = double.tryParse(value?.trim() ?? '') ?? 0;
+    if (_selectedPlan.isFixedAmount &&
+        _selectedPlan.fixedAmount > 0 &&
+        amount < _selectedPlan.fixedAmount) {
+      return 'Minimum deposit is $_minimumDepositLabel';
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     _amount.dispose();
@@ -1785,7 +1806,20 @@ class _DepositFormState extends State<_DepositForm> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Amount'),
-                validator: _positiveNumber),
+                validator: _validateDepositAmount),
+            if (_selectedPlan.isFixedAmount && _selectedPlan.fixedAmount > 0) ...[
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Minimum deposit: $_minimumDepositLabel',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
                 controller: _notes,

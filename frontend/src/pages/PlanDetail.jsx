@@ -44,7 +44,8 @@ import {
   FaCrown,
   FaComments,
   FaPaperPlane,
-  FaWhatsapp
+  FaWhatsapp,
+  FaInfoCircle
 } from 'react-icons/fa';
 import { format, differenceInDays, isBefore } from 'date-fns';
 import { formatSaveWiseDate } from '../utils/date';
@@ -102,6 +103,7 @@ const PlanDetail = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [topError, setTopError] = useState('');
+  const [selectedChatMessage, setSelectedChatMessage] = useState(null);
 
   useEffect(() => {
     fetchPlanDetails();
@@ -265,7 +267,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
         plan_id: id,
         ...depositForm
       });
-      toast.success('Deposit recorded successfully');
+      toast.success('Deposited');
       setShowDepositModal(false);
       setDepositForm({
         amount: '',
@@ -414,6 +416,27 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
     } finally {
       setChatLoading(false);
     }
+  };
+
+  const chatStatusIcon = (status) => {
+    if (status === 'read') return <FaCheckDouble className="text-sky-400" title="Read" />;
+    if (status === 'delivered') return <FaCheckDouble className="text-gray-400" title="Delivered" />;
+    if (status === 'unread') return <FaBell className="text-amber-500" title="Unread" />;
+    return <FaCheck className="text-gray-400" title="Sent" />;
+  };
+
+  const memberNameById = (memberId) => {
+    const numericId = Number(memberId);
+    if (numericId === Number(user?.id)) return user?.username || 'You';
+    const member = members.find((item) => Number(item.user_id ?? item.user?.id) === numericId);
+    return member?.user?.username || member?.username || 'User #' + memberId;
+  };
+
+  const chatReadInfo = (message) => {
+    const readBy = Array.isArray(message?.read_by) ? message.read_by : [];
+    const deliveredTo = Array.isArray(message?.delivered_to) ? message.delivered_to : [];
+    const unread = deliveredTo.filter((id) => !readBy.map(Number).includes(Number(id)));
+    return { readBy, deliveredTo, unread };
   };
 
   const handleSendChatMessage = async (e) => {
@@ -1387,8 +1410,18 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                   return (
                     <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-2xl rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-blue-600 text-white' : message.delivery_status === 'unread' ? 'bg-amber-50 text-gray-900 border border-amber-200' : 'bg-white text-gray-800 border'}`}>
-                        <div className={`text-xs mb-1 ${mine ? 'text-blue-100' : 'text-gray-500'}`}>
-                          {message.user?.username || 'Member'} - {formatDate(message.created_at ?? message.createdAt, 'MMM d, h:mm a')}
+                        <div className={`flex items-start justify-between gap-3 text-xs mb-1 ${mine ? 'text-blue-100' : 'text-gray-500'}`}>
+                          <span>
+                            <strong>{message.user?.username || 'Member'}</strong> - {formatDate(message.created_at ?? message.createdAt, 'MMM d, h:mm a')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedChatMessage(message)}
+                            className={`shrink-0 ${mine ? 'text-blue-100 hover:text-white' : 'text-gray-400 hover:text-blue-600'}`}
+                            title="Message info"
+                          >
+                            <FaInfoCircle />
+                          </button>
                         </div>
                         <p className="whitespace-pre-wrap">{message.message}</p>
                         <div className={`mt-2 flex items-center gap-1 text-xs ${mine ? 'justify-end text-blue-100' : 'text-gray-500'}`}>
@@ -1416,6 +1449,34 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
             </form>
           </div>
         )}
+
+        {selectedChatMessage && (() => {
+          const info = chatReadInfo(selectedChatMessage);
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl max-w-md w-full p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Message Info</h3>
+                  <button onClick={() => setSelectedChatMessage(null)} className="text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                </div>
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <p className="font-semibold text-green-700 mb-1">Read by ({info.readBy.length})</p>
+                    <p className="text-gray-700">{info.readBy.length ? info.readBy.map(memberNameById).join(', ') : 'No reads yet'}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-amber-700 mb-1">Unread ({info.unread.length})</p>
+                    <p className="text-gray-700">{info.unread.length ? info.unread.map(memberNameById).join(', ') : 'Everyone delivered has read this message'}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">Delivered to ({info.deliveredTo.length})</p>
+                    <p className="text-gray-700">{info.deliveredTo.length ? info.deliveredTo.map(memberNameById).join(', ') : 'Not delivered to other members yet'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Settings Tab (unchanged) */}
         {activeTab === 'settings' && (
@@ -1567,12 +1628,17 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                       value={depositForm.amount}
                       onChange={(e) => setDepositForm({...depositForm, amount: e.target.value})}
                       required
-                      min="0"
+                      min={plan?.is_fixed_amount && Number(plan?.fixed_amount || 0) > 0 ? Number(plan.fixed_amount) : 0}
                       step="0.01"
                       className="input-field pl-16"
                       placeholder="0.00"
                     />
                   </div>
+                  {plan?.is_fixed_amount && Number(plan?.fixed_amount || 0) > 0 && (
+                    <p className="mt-2 text-xs font-medium text-blue-700">
+                      Minimum deposit for this fixed plan is ZMW {Number(plan.fixed_amount).toLocaleString()}.
+                    </p>
+                  )}
                 </div>
                 
                 <div>

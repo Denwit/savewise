@@ -74,13 +74,13 @@ class _AuthScreenState extends State<AuthScreen> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(0, 18, 0, 28),
+                      padding: const EdgeInsets.fromLTRB(0, 10, 0, 20),
                       child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _HeroImage(height: _isRegistering ? 150 : 180),
+                            _HeroImage(height: _isRegistering ? 96 : 112),
                             const SizedBox(height: 8),
                             Padding(
                               padding:
@@ -97,7 +97,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                     ),
                               ),
                             ),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 10),
                             if (_isRegistering) ...[
                               _AuthField(
                                 headingText: 'Username',
