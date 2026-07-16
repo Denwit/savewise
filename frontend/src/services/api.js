@@ -168,6 +168,12 @@ export const invitationsService = {
   cancelExternalInvitation: (invitationId) => api.delete(`/invitations/external/${invitationId}`),
 };
 
+// Plan chat service
+export const planChatService = {
+  getMessages: (planId) => api.get(`/plans/${planId}/messages`),
+  sendMessage: (planId, message) => api.post(`/plans/${planId}/messages`, { message })
+};
+
 // Contact service - NEW (public endpoint, no auth required)
 export const contactService = {
   submitContactForm: (formData) => {

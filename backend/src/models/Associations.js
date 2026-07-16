@@ -7,6 +7,7 @@ import Reminder from './Reminder.js';
 import Notification from './Notification.js';
 import UserSetting from './UserSetting.js';
 import ContactMessage from './ContactMessage.js';
+import PlanMessage from './PlanMessage.js';
 
 // User associations
 User.hasMany(SavingPlan, { foreignKey: 'owner_id', as: 'ownedPlans' });
@@ -14,6 +15,7 @@ User.hasMany(PlanMember, { foreignKey: 'user_id', as: 'memberships' });
 User.hasMany(Deposit, { foreignKey: 'user_id', as: 'deposits' });
 User.hasMany(Withdrawal, { foreignKey: 'user_id', as: 'withdrawals' });
 User.hasMany(Notification, { foreignKey: 'user_id', as: 'notifications' });
+User.hasMany(PlanMessage, { foreignKey: 'user_id', as: 'planMessages' });
 User.hasOne(UserSetting, { foreignKey: 'user_id', as: 'settings' });
 User.hasMany(PlanMember, { foreignKey: 'user_id', as: 'planMemberships' });
 User.hasMany(PlanMember, { foreignKey: 'invited_by', as: 'sentInvitations' });
@@ -24,6 +26,7 @@ SavingPlan.hasMany(PlanMember, { foreignKey: 'plan_id', as: 'members' });
 SavingPlan.hasMany(Deposit, { foreignKey: 'plan_id', as: 'deposits' });
 SavingPlan.hasMany(Withdrawal, { foreignKey: 'plan_id', as: 'withdrawals' });
 SavingPlan.hasMany(Reminder, { foreignKey: 'plan_id', as: 'reminders' });
+SavingPlan.hasMany(PlanMessage, { foreignKey: 'plan_id', as: 'messages' });
 
 // PlanMember associations
 PlanMember.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
@@ -42,6 +45,10 @@ Deposit.belongsTo(SavingPlan, { foreignKey: 'plan_id', as: 'plan' });
 // Notification associations
 Notification.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// Plan message associations
+PlanMessage.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+PlanMessage.belongsTo(SavingPlan, { foreignKey: 'plan_id', as: 'plan' });
+
 // UserSetting associations
 UserSetting.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
@@ -57,5 +64,6 @@ export {
   Withdrawal,
   Reminder,
   Notification,
-  UserSetting
+  UserSetting,
+  PlanMessage
 };

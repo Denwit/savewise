@@ -46,7 +46,7 @@ export const createDeposit = async (req, res) => {
       where: {
         plan_id,
         user_id: userId,
-        status: { [Op.in]: ['approved', 'partial'] },
+        status: 'approved',
         repaid_amount: { [Op.lt]: sequelize.col('total_amount') }
       },
       order: [['approved_at', 'ASC']],
@@ -67,8 +67,6 @@ export const createDeposit = async (req, res) => {
       if (w.repaid_amount >= total) {
         w.status = 'paid';
         w.paid_at = new Date();
-      } else if (w.repaid_amount > 0) {
-        w.status = 'partial';
       }
       await w.save({ transaction });
 
@@ -151,7 +149,7 @@ export const createDeposit = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error('Create deposit error:', error);
-    res.status(500).json({ success: false, message: 'Error recording deposit' });
+    res.status(500).json({ success: false, message: error.message || 'Error recording deposit' });
   }
 };
 

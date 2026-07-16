@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../models/saving_plan.dart';
@@ -34,6 +37,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       appBar: AppBar(
         title: const Text('Plan details'),
         actions: [
+          IconButton(
+              tooltip: 'Plan chat',
+              onPressed: _openChat,
+              icon: const Icon(Icons.forum_outlined)),
           FutureBuilder<_PlanDetailData>(
             future: _future,
             builder: (context, snapshot) {
@@ -81,6 +88,12 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 _PlanHeader(plan: data.plan, money: _money),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _openChat,
+                  icon: const Icon(Icons.forum_outlined),
+                  label: const Text('Open plan chat'),
+                ),
                 if (canManage) ...[
                   const SizedBox(height: 16),
                   FilledButton.icon(
@@ -142,6 +155,15 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
       _future = next;
     });
     await next;
+  }
+
+  Future<void> _openChat() async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => _PlanChatScreen(
+        apiClient: widget.apiClient,
+        planId: widget.planId,
+      ),
+    ));
   }
 
   Future<void> _handleMenu(String value) async {
@@ -340,6 +362,18 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
       }
+    }
+  }
+
+  Future<void> _shareInvitationOnWhatsApp(String link) async {
+    final message = Uri.encodeComponent('Join my SaveWise plan using this link: $link');
+    final appUrl = Uri.parse('whatsapp://send?text=$message');
+    final webUrl = Uri.parse('https://wa.me/?text=$message');
+
+    if (await canLaunchUrl(appUrl)) {
+      await launchUrl(appUrl, mode: LaunchMode.externalApplication);
+    } else {
+      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -595,6 +629,153 @@ class _DetailSection extends StatelessWidget {
             value: _text(plan['max_members'], fallback: 'Not set')),
         _InfoRow(label: 'Role', value: _text(plan['role'], fallback: 'member')),
       ],
+    );
+  }
+}
+
+class _PlanChatScreen extends StatefulWidget {
+  const _PlanChatScreen({required this.apiClient, required this.planId});
+
+  final ApiClient apiClient;
+  final int planId;
+
+  @override
+  State<_PlanChatScreen> createState() => _PlanChatScreenState();
+}
+
+class _PlanChatScreenState extends State<_PlanChatScreen> {
+  final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  List<Map<String, dynamic>> _messages = [];
+  bool _loading = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _timer = Timer.periodic(const Duration(seconds: 6), (_) => _load(silent: true));
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    try {
+      if (!silent) setState(() => _loading = true);
+      final messages = await widget.apiClient.getPlanMessages(widget.planId);
+      if (!mounted) return;
+      setState(() => _messages = messages);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
+    } on ApiException catch (error) {
+      if (mounted && !silent) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted && !silent) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    try {
+      final message = await widget.apiClient.sendPlanMessage(
+        planId: widget.planId,
+        message: text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages = [..._messages, message];
+        _controller.clear();
+      });
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Plan group chat'),
+        actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _messages.isEmpty
+                    ? const Center(child: Text('No messages yet. Start the conversation.'))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final message = _messages[index];
+                          final user = _map(message['user']);
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: const [BoxShadow(color: Color(0x11000000), blurRadius: 8)],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${_text(user['username'], fallback: 'Member')} - ${formatSaveWiseDateTime(message['created_at'])}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(_text(message['message'])),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 4,
+                      decoration: const InputDecoration(hintText: 'Message plan members...'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _send,
+                    child: const Icon(Icons.send_outlined),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -264,6 +264,23 @@ class ApiClient {
     return _list(data, 'deposits');
   }
 
+  Future<List<Map<String, dynamic>>> getPlanMessages(int planId) async {
+    final data = await _request('GET', '/plans/$planId/messages');
+    return _list(data, 'messages');
+  }
+
+  Future<Map<String, dynamic>> sendPlanMessage({
+    required int planId,
+    required String message,
+  }) async {
+    final data = await _request(
+      'POST',
+      '/plans/$planId/messages',
+      body: {'message': message},
+    );
+    return _map(data, 'message');
+  }
+
   Future<List<Map<String, dynamic>>> getWithdrawals({int? planId}) async {
     final query = planId == null ? '' : '?plan_id=$planId&limit=100';
     final data = await _request('GET', '/withdrawals$query');

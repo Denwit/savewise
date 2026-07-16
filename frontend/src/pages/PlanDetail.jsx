@@ -15,7 +15,7 @@ import {
   ArcElement,
   LineController
 } from 'chart.js';
-import { planService, depositService, withdrawalService, memberService, invitationsService } from '../services/api';
+import { planService, depositService, withdrawalService, memberService, invitationsService, planChatService } from '../services/api';
 import {
   FaArrowLeft,
   FaCalendarAlt,
@@ -41,7 +41,10 @@ import {
   FaTrash,
   FaTimes,
   FaCheck,
-  FaCrown
+  FaCrown,
+  FaComments,
+  FaPaperPlane,
+  FaWhatsapp
 } from 'react-icons/fa';
 import { format, differenceInDays, isBefore } from 'date-fns';
 import { formatSaveWiseDate } from '../utils/date';
@@ -93,6 +96,10 @@ const PlanDetail = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState(null);
   const [userBorrowed, setUserBorrowed] = useState(0);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [topError, setTopError] = useState('');
 
   useEffect(() => {
     fetchPlanDetails();
@@ -115,8 +122,20 @@ const PlanDetail = () => {
     if (activeTab === 'withdrawals' && plan) {
       fetchPlanWithdrawals();
     }
+    if (activeTab === 'chat' && plan) {
+      fetchPlanMessages();
+      const chatTimer = window.setInterval(fetchPlanMessages, 6000);
+      return () => window.clearInterval(chatTimer);
+    }
   }, [activeTab, plan]);
   const formatDate = (dateString, dateFormat = 'MMM d, yyyy') => formatSaveWiseDate(dateString, dateFormat);
+
+  const showError = (error, fallback) => {
+    const message = error?.response?.data?.message || error?.message || fallback;
+    setTopError(message);
+    toast.error(message);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
 
 
@@ -254,7 +273,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
       fetchPlanDetails();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to record deposit');
+      showError(error, 'Failed to record deposit');
     }
   };
 
@@ -356,6 +375,37 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success('Link copied to clipboard!');
+  };
+  const shareToWhatsApp = (link) => {
+    const message = encodeURIComponent(`Join my SaveWise plan "${plan?.plan_name || ''}" using this link: ${link}`);
+    window.open(`https://wa.me/?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const fetchPlanMessages = async () => {
+    try {
+      setChatLoading(true);
+      const response = await planChatService.getMessages(id);
+      setChatMessages(response.data.messages || []);
+    } catch (error) {
+      console.error('Failed to load plan chat:', error);
+      showError(error, 'Failed to load plan chat');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleSendChatMessage = async (e) => {
+    e.preventDefault();
+    const message = chatInput.trim();
+    if (!message) return;
+    try {
+      const response = await planChatService.sendMessage(id, message);
+      setChatMessages((current) => [...current, response.data.message]);
+      setChatInput('');
+    } catch (error) {
+      console.error('Failed to send plan chat message:', error);
+      showError(error, 'Failed to send message');
+    }
   };
 
   const handleCancelInvitation = async (invitationId) => {
@@ -492,7 +542,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
       <div className="text-center py-12">
         <h3 className="text-xl font-semibold text-gray-800 mb-2">Plan not found</h3>
         <button onClick={() => navigate('/plans')} className="mt-4 text-blue-600 hover:text-blue-700">
-          ← Back to Plans
+          Back to Plans
         </button>
       </div>
     );
@@ -502,6 +552,12 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
 
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {topError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 flex items-start justify-between gap-3">
+          <span>{topError}</span>
+          <button onClick={() => setTopError('')} className="font-semibold text-red-700 hover:text-red-900">Dismiss</button>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-8">
         <button onClick={() => navigate('/plans')} className="flex items-center text-blue-600 hover:text-blue-700 mb-4">
@@ -645,7 +701,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-8">
         <nav className="flex space-x-8">
-          {['overview', 'deposits', 'withdrawals', 'members', 'settings'].map((tab) => (
+          {['overview', 'deposits', 'withdrawals', 'members', 'chat', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1151,6 +1207,14 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                       <FaCopy className="mr-2" />
                       Copy
                     </button>
+                    <button
+                      onClick={() => shareToWhatsApp(generatedLink)}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center"
+                      title="Share on WhatsApp"
+                    >
+                      <FaWhatsapp className="mr-2" />
+                      Share WhatsApp
+                    </button>
                   </div>
                   
                   <div className="flex justify-end">
@@ -1243,6 +1307,59 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
           </div>
         )}
 
+
+        {activeTab === 'chat' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                  <FaComments className="mr-2 text-blue-500" />
+                  Plan Group Chat
+                </h3>
+                <p className="text-sm text-gray-500">Members of this plan can chat here.</p>
+              </div>
+              <button onClick={fetchPlanMessages} className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50">Refresh</button>
+            </div>
+            <div className="h-96 overflow-y-auto p-6 bg-slate-50 space-y-4">
+              {chatLoading && chatMessages.length === 0 ? (
+                <p className="text-center text-gray-500">Loading messages...</p>
+              ) : chatMessages.length === 0 ? (
+                <div className="text-center text-gray-500 py-16">
+                  <FaComments className="mx-auto text-4xl text-gray-300 mb-3" />
+                  <p>No messages yet. Start the plan conversation.</p>
+                </div>
+              ) : (
+                chatMessages.map((message) => {
+                  const mine = message.user_id === user?.id;
+                  return (
+                    <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-2xl rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border'}`}>
+                        <div className={`text-xs mb-1 ${mine ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {message.user?.username || 'Member'} - {formatDate(message.created_at, 'MMM d, h:mm a')}
+                        </div>
+                        <p className="whitespace-pre-wrap">{message.message}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <form onSubmit={handleSendChatMessage} className="p-4 border-t border-gray-200 flex gap-3">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="input-field flex-1"
+                maxLength={2000}
+                placeholder="Type a message to plan members..."
+              />
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                <FaPaperPlane className="mr-2" />
+                Send
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* Settings Tab (unchanged) */}
         {activeTab === 'settings' && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -1298,7 +1415,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
     className="input-field"
   />
   <p className="text-xs text-gray-500 mt-1">
-    Members can withdraw up to (deposits × multiplier). Set 0 to disable withdrawals.
+    Members can withdraw up to (deposits x multiplier). Set 0 to disable withdrawals.
   </p>
 </div>
       
@@ -1512,7 +1629,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
 )}
 {userTotalDeposits > 0 && !hasPendingWithdrawal && (
   <p className="text-xs text-gray-600 mt-1">
-    You can withdraw up to ZMW {maxWithdraw.toFixed(2)} (based on your deposits × {multiplier}).
+    You can withdraw up to ZMW {maxWithdraw.toFixed(2)} (based on your deposits x {multiplier}).
   </p>
 )}
               
@@ -1538,3 +1655,5 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
 };
 
 export default PlanDetail;
+
+
