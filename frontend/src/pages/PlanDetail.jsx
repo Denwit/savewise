@@ -80,7 +80,7 @@ const PlanDetail = () => {
     amount: '',
     reason: ''
   });
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'overview');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEmailInviteModal, setShowEmailInviteModal] = useState(false);
   const [members, setMembers] = useState([]);
@@ -88,6 +88,7 @@ const PlanDetail = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -351,24 +352,28 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
 
   const handleInviteByEmail = async (e) => {
   e.preventDefault();
-  if (!inviteEmail.trim()) {
-    toast.error("Please enter an email address");
+  if (!invitePhone.trim()) {
+    showError(null, "Please enter a WhatsApp phone number");
     return;
   }
   try {
     const response = await planService.inviteExternal(id, {
-      email: inviteEmail,
+      phone: invitePhone,
       name: inviteName,
+      channel: 'whatsapp',
     });
-    setGeneratedLink(response.data.data.invitation_link);
+    const link = response.data.data.invitation_link;
+    setGeneratedLink(link);
     setShowEmailInviteModal(false);
     setShowLinkModal(true);
-    setInviteEmail("");
-    setInviteName("");
     fetchPendingInvitations();
-    toast.success("Invitation link generated successfully!");
+    shareToWhatsApp(link, invitePhone);
+    setInviteEmail("");
+    setInvitePhone("");
+    setInviteName("");
+    toast.success("WhatsApp invitation link generated successfully!");
   } catch (error) {
-    toast.error(error.response?.data?.message || "Error generating invitation link");
+    showError(error, "Error generating invitation link");
   }
 };
 
@@ -1014,8 +1019,8 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                     onClick={() => setShowEmailInviteModal(true)}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center"
                   >
-                    <FaEnvelope className="mr-2" />
-                    Invite by Email
+                    <FaWhatsapp className="mr-2" />
+                    Invite by WhatsApp
                   </button>
                 </div>
               )}
@@ -1101,13 +1106,13 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
               </div>
             )}
             
-            {/* Email Invite Modal */}
+            {/* WhatsApp Invite Modal */}
             {showEmailInviteModal && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                 <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Invite by Email
+                      Invite by WhatsApp
                     </h3>
                     <button
                       onClick={() => setShowEmailInviteModal(false)}
@@ -1121,14 +1126,14 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Email Address *
+                          WhatsApp Number *
                         </label>
                         <input
-                          type="email"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
+                          type="tel"
+                          value={invitePhone}
+                          onChange={(e) => setInvitePhone(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          placeholder="user@example.com"
+                          placeholder="260971234567"
                           required
                         />
                       </div>
@@ -1158,7 +1163,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                         type="submit"
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                       >
-                        Generate Invitation Link
+                        Send WhatsApp Invite
                       </button>
                     </div>
                   </form>
@@ -1208,7 +1213,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                       Copy
                     </button>
                     <button
-                      onClick={() => shareToWhatsApp(generatedLink)}
+                      onClick={() => shareToWhatsApp(generatedLink, invitePhone)}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center"
                       title="Share on WhatsApp"
                     >
@@ -1333,11 +1338,15 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                   const mine = message.user_id === user?.id;
                   return (
                     <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-2xl rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border'}`}>
+                      <div className={`max-w-2xl rounded-2xl px-4 py-3 shadow-sm ${mine ? 'bg-blue-600 text-white' : message.delivery_status === 'unread' ? 'bg-amber-50 text-gray-900 border border-amber-200' : 'bg-white text-gray-800 border'}`}>
                         <div className={`text-xs mb-1 ${mine ? 'text-blue-100' : 'text-gray-500'}`}>
-                          {message.user?.username || 'Member'} - {formatDate(message.created_at, 'MMM d, h:mm a')}
+                          {message.user?.username || 'Member'} - {formatDate(message.created_at ?? message.createdAt, 'MMM d, h:mm a')}
                         </div>
                         <p className="whitespace-pre-wrap">{message.message}</p>
+                        <div className={`mt-2 flex items-center gap-1 text-xs ${mine ? 'justify-end text-blue-100' : 'text-gray-500'}`}>
+                          {chatStatusIcon(message.delivery_status)}
+                          <span>{message.delivery_status || 'sent'}</span>
+                        </div>
                       </div>
                     </div>
                   );

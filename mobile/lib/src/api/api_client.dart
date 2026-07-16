@@ -204,13 +204,20 @@ class ApiClient {
 
   Future<Map<String, dynamic>> inviteExternal({
     required int planId,
-    required String email,
+    String? email,
+    String? phone,
     String? name,
+    String? channel,
   }) async {
     final data = await _request(
       'POST',
       '/plans/$planId/invite-external',
-      body: {'email': email, if (name != null && name.isNotEmpty) 'name': name},
+      body: {
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (name != null && name.isNotEmpty) 'name': name,
+        if (channel != null && channel.isNotEmpty) 'channel': channel,
+      },
     );
     return data;
   }

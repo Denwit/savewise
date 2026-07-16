@@ -17,11 +17,14 @@ export const generateInvitationLink = async (req, res) => {
   
   try {
     const { id } = req.params;
-    const { email, name } = req.body;
+    const { email, phone, name, channel } = req.body;
+    const normalizedEmail = email ? email.toLowerCase().trim() : null;
+    const normalizedPhone = phone ? phone.toString().replace(/[^0-9+]/g, '') : null;
 
     console.log('generateInvitationLink - req.params:', req.params);
     console.log('generateInvitationLink - id:', id);
-    console.log('generateInvitationLink - email:', email);
+    console.log('generateInvitationLink - email:', normalizedEmail);
+    console.log('generateInvitationLink - phone:', normalizedPhone);
     
     
     const userId = getUserIdFromRequest(req);
@@ -81,21 +84,27 @@ export const generateInvitationLink = async (req, res) => {
       });
     }
     
-    // Normalize email to lowercase for comparison
-    const normalizedEmail = email.toLowerCase();
+    if (!normalizedEmail && !normalizedPhone) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Enter an email address or WhatsApp phone number'
+      });
+    }
     
     // Check if user exists with this email
-    const existingUser = await User.findOne({
+    const existingUser = normalizedEmail ? await User.findOne({
       where: { email: normalizedEmail },
       transaction
-    });
+    }) : null;
     
-    // Check if email is already invited or a member
+    // Check if contact is already invited or a member
+    const inviteChecks = [];
+    if (normalizedEmail) inviteChecks.push({ invited_email: normalizedEmail });
+    if (normalizedPhone) inviteChecks.push({ invited_phone: normalizedPhone });
     const whereCondition = {
       plan_id: id,
-      [Op.or]: [
-        { invited_email: normalizedEmail }
-      ],
+      [Op.or]: inviteChecks,
       status: { [Op.in]: ['pending', 'active', 'invited'] }
     };
     
@@ -112,7 +121,7 @@ export const generateInvitationLink = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'This email has already been invited to this plan'
+        message: 'This person has already been invited to this plan'
       });
     }
     
@@ -150,28 +159,32 @@ export const generateInvitationLink = async (req, res) => {
     
     console.log('Invitation link generated:', invitationLink);
     
-    // Send invitation email
-    try {
-      await EmailService.sendInvitationEmail(
-        normalizedEmail,
-        plan.plan_name,
-        currentUser.username,
-        invitationLink
-      );
-      console.log('Invitation email sent successfully');
-    } catch (emailError) {
-      console.warn('Failed to send invitation email:', emailError);
-      // Don't fail the whole request if email fails
+    // Send invitation email only when this invite was created with an email.
+    if (normalizedEmail) {
+      try {
+        await EmailService.sendInvitationEmail(
+          normalizedEmail,
+          plan.plan_name,
+          currentUser.username,
+          invitationLink
+        );
+        console.log('Invitation email sent successfully');
+      } catch (emailError) {
+        console.warn('Failed to send invitation email:', emailError);
+        // Don't fail the whole request if email fails
+      }
     }
     
     res.status(201).json({
       success: true,
-      message: 'Invitation link generated and email sent successfully',
+      message: normalizedPhone ? 'WhatsApp invitation link generated successfully' : 'Invitation link generated and email sent successfully',
       data: {
         invitation_link: invitationLink,
         invitation: {
           id: invitation.id,
           email: invitation.invited_email,
+          phone: invitation.invited_phone,
+          channel: normalizedPhone ? 'whatsapp' : 'email',
           expires_at: invitation.token_expires,
           status: invitation.status
         }

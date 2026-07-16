@@ -29,6 +29,10 @@ const PlanMember = sequelize.define('PlanMember', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  invited_phone: {
+    type: DataTypes.STRING(30),
+    allowNull: true
+  },
   is_admin: {
     type: DataTypes.BOOLEAN,
     defaultValue: false

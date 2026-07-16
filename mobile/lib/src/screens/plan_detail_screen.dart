@@ -183,7 +183,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   }
 
   Future<void> _inviteMember() async {
-    final email = TextEditingController();
+    final phone = TextEditingController();
     final name = TextEditingController();
     final search = TextEditingController();
     var mode = 'existing';
@@ -217,10 +217,6 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           value: 'existing',
                           icon: Icon(Icons.person_search_outlined),
                           label: Text('Existing')),
-                      ButtonSegment(
-                          value: 'email',
-                          icon: Icon(Icons.email_outlined),
-                          label: Text('Email')),
                       ButtonSegment(
                           value: 'whatsapp',
                           icon: Icon(Icons.chat_outlined),
@@ -294,11 +290,12 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                       }),
                   ] else ...[
                     TextField(
-                      controller: email,
-                      keyboardType: TextInputType.emailAddress,
+                      controller: phone,
+                      keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
-                        labelText: 'Email address',
-                        prefixIcon: Icon(Icons.email_outlined),
+                        labelText: 'WhatsApp number',
+                        hintText: '260971234567',
+                        prefixIcon: Icon(Icons.chat_outlined),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -314,10 +311,10 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                   FilledButton.icon(
                     onPressed: () => Navigator.of(context).pop(true),
                     icon: Icon(mode == 'whatsapp'
-                        ? Icons.content_copy_outlined
+                        ? Icons.chat_outlined
                         : Icons.send_outlined),
                     label: Text(mode == 'whatsapp'
-                        ? 'Create WhatsApp link'
+                        ? 'Send WhatsApp invite'
                         : 'Send invite'),
                   )
                 ],
@@ -338,22 +335,19 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
               .showSnackBar(const SnackBar(content: Text('Invitation sent')));
         }
       } else {
-        if (email.text.trim().isEmpty) return;
+        if (phone.text.trim().isEmpty) return;
         final data = await widget.apiClient.inviteExternal(
             planId: widget.planId,
-            email: email.text.trim(),
-            name: name.text.trim());
+            phone: phone.text.trim(),
+            name: name.text.trim(),
+            channel: 'whatsapp');
         final link = _invitationLink(data);
-        if (mode == 'whatsapp' && link.isNotEmpty) {
-          await Clipboard.setData(ClipboardData(
-              text: 'Join my SaveWise plan using this link: $link'));
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('WhatsApp invitation link copied')));
-          }
-        } else if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Invitation sent')));
+        if (link.isNotEmpty) {
+          await _shareInvitationOnWhatsApp(link, phone.text.trim());
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('WhatsApp invitation ready')));
         }
       }
       await _refresh();
@@ -362,13 +356,22 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
       }
+    } finally {
+      phone.dispose();
+      name.dispose();
+      search.dispose();
     }
   }
 
-  Future<void> _shareInvitationOnWhatsApp(String link) async {
+  Future<void> _shareInvitationOnWhatsApp(String link, [String phone = '']) async {
     final message = Uri.encodeComponent('Join my SaveWise plan using this link: $link');
-    final appUrl = Uri.parse('whatsapp://send?text=$message');
-    final webUrl = Uri.parse('https://wa.me/?text=$message');
+    final number = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final appUrl = Uri.parse(number.isEmpty
+        ? 'whatsapp://send?text=$message'
+        : 'whatsapp://send?phone=$number&text=$message');
+    final webUrl = Uri.parse(number.isEmpty
+        ? 'https://wa.me/?text=$message'
+        : 'https://wa.me/$number?text=$message');
 
     if (await canLaunchUrl(appUrl)) {
       await launchUrl(appUrl, mode: LaunchMode.externalApplication);
@@ -644,6 +647,31 @@ class _PlanChatScreen extends StatefulWidget {
 }
 
 class _PlanChatScreenState extends State<_PlanChatScreen> {
+  IconData _chatStatusIcon(String status) {
+    switch (status) {
+      case 'read':
+        return Icons.done_all;
+      case 'delivered':
+        return Icons.done_all;
+      case 'unread':
+        return Icons.mark_chat_unread_outlined;
+      default:
+        return Icons.done;
+    }
+  }
+
+  Color _chatStatusColor(String status) {
+    switch (status) {
+      case 'read':
+        return Colors.lightBlue;
+      case 'delivered':
+        return Colors.grey;
+      case 'unread':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   List<Map<String, dynamic>> _messages = [];
@@ -726,13 +754,19 @@ class _PlanChatScreenState extends State<_PlanChatScreen> {
                         itemBuilder: (context, index) {
                           final message = _messages[index];
                           final user = _map(message['user']);
+                          final isMine = _toBool(message['is_mine']);
+                          final status = _text(message['delivery_status'], fallback: 'sent');
                           return Align(
-                            alignment: Alignment.centerLeft,
+                            alignment: isMine ? Alignment.centerLeft : Alignment.centerRight,
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 10),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isMine
+                                    ? Theme.of(context).colorScheme.primary
+                                    : status == 'unread'
+                                        ? const Color(0xFFFFF7E0)
+                                        : Colors.white,
                                 borderRadius: BorderRadius.circular(14),
                                 boxShadow: const [BoxShadow(color: Color(0x11000000), blurRadius: 8)],
                               ),
@@ -740,11 +774,35 @@ class _PlanChatScreenState extends State<_PlanChatScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${_text(user['username'], fallback: 'Member')} - ${formatSaveWiseDateTime(message['created_at'])}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    '${_text(user['username'], fallback: 'Member')} - ${formatSaveWiseDateTime(message['created_at'] ?? message['createdAt'])}',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: isMine ? Colors.white70 : null,
+                                        ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(_text(message['message'])),
+                                  Text(_text(message['message']),
+                                      style: TextStyle(
+                                          color: isMine ? Colors.white : null)),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(_chatStatusIcon(status),
+                                          size: 15,
+                                          color: isMine
+                                              ? Colors.white70
+                                              : _chatStatusColor(status)),
+                                      const SizedBox(width: 4),
+                                      Text(status,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                  color: isMine
+                                                      ? Colors.white70
+                                                      : _chatStatusColor(status))),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),

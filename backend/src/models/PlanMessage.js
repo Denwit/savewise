@@ -27,6 +27,16 @@ const PlanMessage = sequelize.define('PlanMessage', {
     type: DataTypes.ENUM('text', 'system'),
     defaultValue: 'text'
   },
+  delivered_to: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  read_by: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
   edited_at: {
     type: DataTypes.DATE,
     allowNull: true

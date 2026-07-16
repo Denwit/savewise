@@ -577,6 +577,24 @@ class _HomeScreenState extends State<HomeScreen> {
       () => widget.apiClient.acceptInvitation(id), 'Invitation accepted');
   Future<void> _rejectInvitation(int id) => _runAction(
       () => widget.apiClient.rejectInvitation(id), 'Invitation rejected');
+  int _notificationPlanId(Map<String, dynamic> item) {
+    final metadata = _map(item['metadata']);
+    final metaPlanId = _toInt(metadata['plan_id']);
+    if (metaPlanId > 0) return metaPlanId;
+    final link = _text(item['link']);
+    final match = RegExp(r'/plans/(\d+)').firstMatch(link);
+    return match == null ? 0 : int.tryParse(match.group(1) ?? '') ?? 0;
+  }
+
+  Future<void> _openNotificationTarget(Map<String, dynamic> item) async {
+    final planId = _notificationPlanId(item);
+    if (planId <= 0 || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) =>
+            PlanDetailScreen(apiClient: widget.apiClient, planId: planId)));
+    await _refresh();
+  }
+
   Future<void> _openNotification(Map<String, dynamic> item) async {
     final id = _toInt(item['id']);
     if (id > 0 && !_toBool(item['is_read'])) {
@@ -606,6 +624,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          if (_notificationPlanId(item) > 0)
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _openNotificationTarget(item);
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: Text(_text(_map(item['metadata'])['item_type']) ==
+                      'plan_message'
+                  ? 'Open chat'
+                  : 'Open item'),
+            ),
           if (id > 0)
             TextButton.icon(
               onPressed: () {
