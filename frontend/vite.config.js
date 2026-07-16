@@ -7,8 +7,9 @@ export default defineConfig({
     port: 3024,
     proxy: {
       '/api': {
-        target: 'http://api.savewisezm.com:5024',
-        changeOrigin: true
+        target: 'https://savewise-mpzn.onrender.com',
+        changeOrigin: true,
+        secure: true
       }
     }
   }

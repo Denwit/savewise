@@ -28,7 +28,7 @@ const Invitations = () => {
     total: 0
   });
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'https://api.savewisezm.com/api';
+  const API_BASE = import.meta.env.VITE_API_URL || 'https://savewise-mpzn.onrender.com/api';
 
   const formatDate = (dateString, dateFormat = 'MMM d, yyyy HH:mm') => formatSaveWiseDate(dateString, dateFormat);
 
@@ -575,4 +575,5 @@ const response = await fetch(`${API_BASE}/invitations`, {
 };
 
 export default Invitations;
+
 

@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.savewisezm.com/api';
+import { API_URL } from '../config/api';
 
 const contactService = {
   submitContactForm: async (formData) => {

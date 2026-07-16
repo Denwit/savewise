@@ -27,7 +27,7 @@ const Layout = ({ children }) => {
   const [notificationPolling, setNotificationPolling] = useState(null);
   const [invitationsCount, setInvitationsCount] = useState(0);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'https://api.savewisezm.com/api';
+  const API_BASE = import.meta.env.VITE_API_URL || 'https://savewise-mpzn.onrender.com/api';
 
   // Function to fetch unread notification count
   const fetchUnreadCount = useCallback(async () => {

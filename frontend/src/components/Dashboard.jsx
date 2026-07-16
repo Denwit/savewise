@@ -44,7 +44,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('token');
 
       const response = await axios.get(
-        'http://api.savewisezm.com/api/plans/dashboard',
+        'https://savewise-mpzn.onrender.com/api/plans/dashboard',
         {
           headers: { Authorization: `Bearer ${token}` }
         }

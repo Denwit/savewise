@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { parseSaveWiseDate } from '../utils/date';
 import { authService } from '../services/api';
+import { API_ORIGIN } from '../config/api';
 import { 
   FaUser, 
   FaEnvelope, 
@@ -47,7 +48,7 @@ const Profile = () => {
     }
   });
   
-  const API_BASE = "https://api.savewisezm.com";
+  const API_BASE = API_ORIGIN;
 
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -904,6 +905,7 @@ const Profile = () => {
 };
 
 export default Profile;
+
 
 
 
