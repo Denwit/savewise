@@ -1,0 +1,17 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - lib/bloc/**
+    - lib/dao/**
+    - lib/data/**
+    - lib/helpers/**
+    - lib/model/**
+    - lib/screens/**
+    - lib/theme/**
+    - lib/widgets/**
+    - lib/app.dart
+    - lib/events.dart
+
+linter:
+  rules:
