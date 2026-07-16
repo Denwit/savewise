@@ -5,9 +5,15 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '../../.env'), override: true });
+dotenv.config({ path: path.join(__dirname, '../../.env'), override: false });
 
 const dialect = process.env.DB_DIALECT || 'postgres';
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+const hasExplicitHost = Boolean(process.env.DB_HOST);
+
+if (process.env.NODE_ENV === 'production' && !hasDatabaseUrl && !hasExplicitHost) {
+  throw new Error('Production database configuration is missing. Set DATABASE_URL from your Render Postgres Internal Database URL, or set DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD.');
+}
 
 const commonOptions = {
   dialect,
@@ -28,7 +34,7 @@ if (dialect === 'postgres') {
   };
 }
 
-const sequelize = process.env.DATABASE_URL
+const sequelize = hasDatabaseUrl
   ? new Sequelize(process.env.DATABASE_URL, commonOptions)
   : new Sequelize(
       process.env.DB_NAME || 'savewise',
