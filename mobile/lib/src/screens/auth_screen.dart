@@ -449,7 +449,7 @@ class _HeroImage extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         height: height,
         child: Image.asset(
-          'assets/images/login.png',
+          'assets/images/savewise_logo_transparent.png',
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) => const Icon(
             Icons.savings_outlined,
@@ -627,3 +627,4 @@ class _InlineLink extends StatelessWidget {
         ),
       );
 }
+

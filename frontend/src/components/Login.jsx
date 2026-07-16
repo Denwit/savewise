@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config/api';
+import savewiseLogo from '../assets/savewise_logo_transparent.png';
 import { toast } from 'react-toastify';
 
 const Login = () => {
@@ -35,6 +36,7 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
         <div className="text-center mb-8">
+          <img src={savewiseLogo} alt="SaveWise logo" className="mx-auto mb-3 h-16 w-16 object-contain" />
           <h1 className="text-3xl font-bold text-blue-700">SaveWise</h1>
           <p className="text-gray-600 mt-2">Smart Saving Plans</p>
         </div>
@@ -90,3 +92,5 @@ const Login = () => {
 };
 
 export default Login;
+
+

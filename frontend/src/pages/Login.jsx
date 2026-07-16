@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { authService } from '../services/api';
 import { FaEnvelope, FaLock } from 'react-icons/fa';
+import savewiseLogo from '../assets/savewise_logo_transparent.png';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -142,6 +143,7 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
+          <img src={savewiseLogo} alt="SaveWise logo" className="mx-auto mb-3 h-20 w-20 object-contain" />
           <h1 className="text-4xl font-bold text-blue-700">SaveWise</h1>
           <p className="mt-2 text-lg text-gray-600">Smart Saving Plans for Everyone</p>
         </div>
@@ -288,3 +290,4 @@ const Login = () => {
 };
 
 export default Login;
+
