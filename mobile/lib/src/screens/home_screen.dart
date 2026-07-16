@@ -578,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _rejectInvitation(int id) => _runAction(
       () => widget.apiClient.rejectInvitation(id), 'Invitation rejected');
   int _notificationPlanId(Map<String, dynamic> item) {
-    final metadata = _map(item['metadata']);
+    final metadata = _asMap(item['metadata']);
     final metaPlanId = _toInt(metadata['plan_id']);
     if (metaPlanId > 0) return metaPlanId;
     final link = _text(item['link']);
@@ -631,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _openNotificationTarget(item);
               },
               icon: const Icon(Icons.open_in_new),
-              label: Text(_text(_map(item['metadata'])['item_type']) ==
+              label: Text(_text(_asMap(item['metadata'])['item_type']) ==
                       'plan_message'
                   ? 'Open chat'
                   : 'Open item'),
