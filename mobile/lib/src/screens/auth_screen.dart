@@ -66,22 +66,22 @@ class _AuthScreenState extends State<AuthScreen> {
                 decoration: const BoxDecoration(
                   color: _whiteShade,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(40),
-                    topRight: Radius.circular(40),
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
                   ),
                 ),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
+                    constraints: const BoxConstraints(maxWidth: 420),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(0, 10, 0, 20),
+                      padding: const EdgeInsets.fromLTRB(0, 4, 0, 14),
                       child: Form(
                         key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _HeroImage(height: _isRegistering ? 96 : 112),
-                            const SizedBox(height: 8),
+                            _HeroImage(height: _isRegistering ? 68 : 78),
+                            const SizedBox(height: 4),
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 20),
@@ -90,14 +90,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context)
                                     .textTheme
-                                    .headlineMedium
+                                    .titleLarge
                                     ?.copyWith(
                                       color: _blackShade,
                                       fontWeight: FontWeight.w900,
                                     ),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 6),
                             if (_isRegistering) ...[
                               _AuthField(
                                 headingText: 'Username',
@@ -110,7 +110,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                         ? 'Use at least 3 characters'
                                         : null,
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 10),
                               _AuthField(
                                 headingText: 'Phone number',
                                 hintText: '+260 123 456 789',
@@ -119,7 +119,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 keyboardType: TextInputType.phone,
                                 textInputAction: TextInputAction.next,
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 10),
                             ],
                             _AuthField(
                               headingText: 'Email',
@@ -133,7 +133,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                       ? 'Enter a valid email'
                                       : null,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             _AuthField(
                               headingText: 'Password',
                               hintText: 'At least 6 characters',
@@ -162,7 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               },
                             ),
                             if (_isRegistering) ...[
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 10),
                               _AuthField(
                                 headingText: 'Confirm password',
                                 hintText: 'Repeat password',
@@ -255,7 +255,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             _AuthButton(
                               onTap: _isLoading ? null : _submit,
                               text: _isRegistering
@@ -265,7 +265,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   : (_isLoading ? 'Signing in...' : 'Sign In'),
                               loading: _isLoading,
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
                             _AuthRichText(
                               description: _isRegistering
                                   ? 'Already Have an account? '
@@ -273,7 +273,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               text: _isRegistering ? 'Log In here' : 'Sign Up',
                               onTap: _toggleMode,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             Wrap(
                               alignment: WrapAlignment.center,
                               spacing: 8,
@@ -415,7 +415,7 @@ class _AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 16, left: 16),
+        padding: const EdgeInsets.only(top: 8, left: 14),
         child: Row(
           children: [
             InkWell(
@@ -424,13 +424,13 @@ class _AuthHeader extends StatelessWidget {
               child: const Padding(
                 padding: EdgeInsets.all(4),
                 child: Icon(Icons.arrow_back_ios_new_rounded,
-                    color: _AuthScreenState._whiteShade, size: 24),
+                    color: _AuthScreenState._whiteShade, size: 20),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Text(
               title,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: _AuthScreenState._whiteShade,
                     fontWeight: FontWeight.w800,
                   ),
@@ -490,20 +490,20 @@ class _AuthField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 10),
+            padding: const EdgeInsets.only(left: 18, right: 18, bottom: 5),
             child: Text(
               headingText,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: _AuthScreenState._blackShade,
                     fontWeight: FontWeight.w700,
                   ),
             ),
           ),
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
+            margin: const EdgeInsets.symmetric(horizontal: 18),
             decoration: BoxDecoration(
               color: _AuthScreenState._grayShade,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: TextFormField(
               controller: controller,
@@ -519,7 +519,7 @@ class _AuthField extends StatelessWidget {
                 prefixIcon: Icon(icon, color: _AuthScreenState._blue),
                 suffixIcon: suffixIcon,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               ),
             ),
           ),
@@ -543,8 +543,8 @@ class _AuthButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          height: 48,
-          margin: const EdgeInsets.symmetric(horizontal: 20),
+          height: 42,
+          margin: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
             color: onTap == null
                 ? _AuthScreenState._blue.withValues(alpha: 0.55)
@@ -554,8 +554,8 @@ class _AuthButton extends StatelessWidget {
           child: Center(
             child: loading
                 ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
@@ -563,7 +563,7 @@ class _AuthButton extends StatelessWidget {
                   )
                 : Text(
                     text,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
                         ),

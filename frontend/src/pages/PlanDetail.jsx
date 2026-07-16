@@ -41,6 +41,7 @@ import {
   FaTrash,
   FaTimes,
   FaCheck,
+  FaCheckDouble,
   FaCrown,
   FaComments,
   FaPaperPlane,
@@ -49,6 +50,13 @@ import {
 } from 'react-icons/fa';
 import { format, differenceInDays, isBefore } from 'date-fns';
 import { formatSaveWiseDate } from '../utils/date';
+
+const renderChatStatusIcon = (status) => {
+  if (status === 'read') return <FaCheckDouble className="text-sky-400" title="Read" />;
+  if (status === 'delivered') return <FaCheckDouble className="text-gray-400" title="Delivered" />;
+  if (status === 'unread') return <FaBell className="text-amber-500" title="Unread" />;
+  return <FaCheck className="text-gray-400" title="Sent" />;
+};
 
 ChartJS.register(
   CategoryScale,
@@ -418,18 +426,12 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
     }
   };
 
-  const chatStatusIcon = (status) => {
-    if (status === 'read') return <FaCheckDouble className="text-sky-400" title="Read" />;
-    if (status === 'delivered') return <FaCheckDouble className="text-gray-400" title="Delivered" />;
-    if (status === 'unread') return <FaBell className="text-amber-500" title="Unread" />;
-    return <FaCheck className="text-gray-400" title="Sent" />;
-  };
 
   const memberNameById = (memberId) => {
     const numericId = Number(memberId);
     if (numericId === Number(user?.id)) return user?.username || 'You';
     const member = members.find((item) => Number(item.user_id ?? item.user?.id) === numericId);
-    return member?.user?.username || member?.username || 'User #' + memberId;
+    return member?.user?.username || member?.username || 'Member';
   };
 
   const chatReadInfo = (message) => {
@@ -1425,7 +1427,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                         </div>
                         <p className="whitespace-pre-wrap">{message.message}</p>
                         <div className={`mt-2 flex items-center gap-1 text-xs ${mine ? 'justify-end text-blue-100' : 'text-gray-500'}`}>
-                          {chatStatusIcon(message.delivery_status)}
+                          {renderChatStatusIcon(message.delivery_status)}
                           <span>{message.delivery_status || 'sent'}</span>
                         </div>
                       </div>

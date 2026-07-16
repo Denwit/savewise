@@ -158,10 +158,13 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   }
 
   Future<void> _openChat() async {
+    final data = await _future;
+    if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => _PlanChatScreen(
         apiClient: widget.apiClient,
         planId: widget.planId,
+        members: data.members,
       ),
     ));
   }
@@ -671,10 +674,15 @@ class _DetailSection extends StatelessWidget {
 }
 
 class _PlanChatScreen extends StatefulWidget {
-  const _PlanChatScreen({required this.apiClient, required this.planId});
+  const _PlanChatScreen({
+    required this.apiClient,
+    required this.planId,
+    required this.members,
+  });
 
   final ApiClient apiClient;
   final int planId;
+  final List<Map<String, dynamic>> members;
 
   @override
   State<_PlanChatScreen> createState() => _PlanChatScreenState();
@@ -712,13 +720,24 @@ class _PlanChatScreenState extends State<_PlanChatScreen> {
     return value.map(_toInt).where((id) => id > 0).toSet().toList();
   }
 
+  String _memberNameById(int id) {
+    for (final member in widget.members) {
+      final user = _map(member['user']);
+      final memberId = _toInt(member['user_id'] ?? user['id']);
+      if (memberId == id) {
+        return _text(user['username'] ?? member['username'], fallback: 'Member');
+      }
+    }
+    return 'Member';
+  }
+
   Future<void> _showMessageInfo(Map<String, dynamic> message) async {
     final readBy = _messageIds(message['read_by']);
     final deliveredTo = _messageIds(message['delivered_to']);
     final unread = deliveredTo.where((id) => !readBy.contains(id)).toList();
 
     String listLabel(List<int> ids, String empty) =>
-        ids.isEmpty ? empty : ids.map((id) => 'User #$id').join(', ');
+        ids.isEmpty ? empty : ids.map(_memberNameById).join(', ');
 
     await showDialog<void>(
       context: context,
