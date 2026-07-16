@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "build": "npm install",
+    "render-build": "npm install"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -30,5 +32,8 @@
   "main": "index.js",
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": "22.x"
+  }
 }
