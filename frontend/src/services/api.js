@@ -165,7 +165,7 @@ export const invitationsService = {
   getPendingCount: () => api.get('/invitations/pending-count'),
   getPendingInvitations: (params) => api.get('/invitations/pending', { params }),
   getInvitationsByStatus: (status) => api.get(`/invitations/status/${status}`),
-  cancelExternalInvitation: (invitationId) => api.delete(`/invitations/external/${invitationId}`),
+  cancelExternalInvitation: (invitationId) => api.delete(`/invitation/external/${invitationId}`),
 };
 
 // Plan chat service

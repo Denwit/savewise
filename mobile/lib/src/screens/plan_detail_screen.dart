@@ -107,7 +107,11 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                 const SizedBox(height: 16),
                 _MembersSection(members: data.members),
                 const SizedBox(height: 16),
-                _InvitationsSection(invitations: data.invitations),
+                _InvitationsSection(
+                  invitations: data.invitations,
+                  apiClient: widget.apiClient,
+                  onChanged: _refresh,
+                ),
                 const SizedBox(height: 16),
                 _MoneySection(
                     title: 'Deposits',
@@ -999,9 +1003,55 @@ class _MembersSection extends StatelessWidget {
 }
 
 class _InvitationsSection extends StatelessWidget {
-  const _InvitationsSection({required this.invitations});
+  const _InvitationsSection({
+    required this.invitations,
+    required this.apiClient,
+    required this.onChanged,
+  });
 
   final List<Map<String, dynamic>> invitations;
+  final ApiClient apiClient;
+  final Future<void> Function() onChanged;
+
+  Future<void> _cancelInvitation(BuildContext context, int invitationId) async {
+    if (invitationId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invitation details are incomplete.')),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel invitation?'),
+        content: const Text('This invitation link will stop working.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Cancel invitation'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await apiClient.cancelExternalInvitation(invitationId);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invitation cancelled')),
+      );
+      await onChanged();
+    } on ApiException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1030,7 +1080,22 @@ class _InvitationsSection extends StatelessWidget {
                     child: Icon(Icons.mark_email_unread_outlined)),
                 title: Text(invitee),
                 subtitle: Text('$inviterName - $inviteDate'),
-                trailing: _StatusChip(status),
+                trailing: status == 'pending'
+                    ? Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          _StatusChip(status),
+                          IconButton(
+                            tooltip: 'Cancel invitation',
+                            icon: const Icon(Icons.cancel_outlined,
+                                color: Colors.red),
+                            onPressed: () => _cancelInvitation(
+                                context, _toInt(invitation['id'])),
+                          ),
+                        ],
+                      )
+                    : _StatusChip(status),
               );
             }).toList(),
     );

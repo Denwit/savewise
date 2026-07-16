@@ -256,17 +256,27 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
       toast.error('Failed to update member role');
     }
   };
+  const getMemberUserId = (member) => {
+    const rawId = member?.user_id ?? member?.userId ?? member?.user?.id;
+    const numericId = Number(rawId);
+    return Number.isFinite(numericId) && numericId > 0 ? numericId : null;
+  };
 
-    const handleRemoveMember = async (memberId) => {
-  if (!window.confirm("Are you sure you want to remove this member?")) return;
-  try {
-    await memberService.removeMember(id, memberId);
-    toast.success("Member removed successfully");
-    fetchPlanMembers();
-  } catch (error) {
-    toast.error(error.response?.data?.message || "Failed to remove member");
-  }
-};
+  const handleRemoveMember = async (member) => {
+    const memberId = getMemberUserId(member);
+    if (!memberId) {
+      toast.error('Member details are incomplete. Please refresh and try again.');
+      return;
+    }
+    if (!window.confirm('Are you sure you want to remove this member?')) return;
+    try {
+      await memberService.removeMember(id, memberId);
+      toast.success('Member removed successfully');
+      fetchPlanMembers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to remove member');
+    }
+  };
 
   const handleDepositSubmit = async (e) => {
     e.preventDefault();
@@ -1362,16 +1372,16 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
               </span>
             )}
             
-            {plan.owner_id !== member.user_id && plan.owner_id === user?.id && (
+            {getMemberUserId(member) && plan.owner_id !== getMemberUserId(member) && plan.owner_id === user?.id && (
               <div className="flex space-x-2">
                 <button
-                  onClick={() => handleRemoveMember(member.user_id)}
+                  onClick={() => handleRemoveMember(member)}
                   className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm hover:bg-red-200"
                 >
                   Remove
                 </button>
                 <button
-                  onClick={() => handleUpdateMemberRole(member.user_id, !member.is_admin)}
+                  onClick={() => handleUpdateMemberRole(getMemberUserId(member), !member.is_admin)}
                   className="px-3 py-1 bg-green-100 text-green-600 rounded text-sm hover:bg-green-200"
                 >
                   {member.is_admin ? 'Remove Admin' : 'Make Admin'}

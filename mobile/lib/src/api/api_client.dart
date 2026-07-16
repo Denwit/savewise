@@ -228,6 +228,10 @@ class ApiClient {
     return _list(data, 'invitations');
   }
 
+  Future<void> cancelExternalInvitation(int invitationId) async {
+    await _request('DELETE', '/invitation/external/$invitationId');
+  }
+
   Future<List<Map<String, dynamic>>> getDeposits() async {
     final data = await _request('GET', '/deposits/my-deposits');
     return _list(data, 'deposits');
