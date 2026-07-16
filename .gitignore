@@ -46,3 +46,4 @@ Thumbs.db
 .vscode/
 .idea/
 mobile/android/build/
+mobile/build_locked_*/
