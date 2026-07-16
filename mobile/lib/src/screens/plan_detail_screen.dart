@@ -183,6 +183,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
   }
 
   Future<void> _inviteMember() async {
+    final email = TextEditingController();
     final phone = TextEditingController();
     final name = TextEditingController();
     final search = TextEditingController();
@@ -218,9 +219,17 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                           icon: Icon(Icons.person_search_outlined),
                           label: Text('Existing')),
                       ButtonSegment(
+                          value: 'email',
+                          icon: Icon(Icons.email_outlined),
+                          label: Text('Email')),
+                      ButtonSegment(
                           value: 'whatsapp',
                           icon: Icon(Icons.chat_outlined),
                           label: Text('WhatsApp')),
+                      ButtonSegment(
+                          value: 'manual',
+                          icon: Icon(Icons.link_outlined),
+                          label: Text('Link')),
                     ],
                     selected: {mode},
                     onSelectionChanged: (value) =>
@@ -289,16 +298,26 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                         );
                       }),
                   ] else ...[
-                    TextField(
-                      controller: phone,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'WhatsApp number',
-                        hintText: '260971234567',
-                        prefixIcon: Icon(Icons.chat_outlined),
+                    if (mode == 'email')
+                      TextField(
+                        controller: email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Email address',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                    if (mode == 'whatsapp')
+                      TextField(
+                        controller: phone,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: 'WhatsApp number',
+                          hintText: '260971234567',
+                          prefixIcon: Icon(Icons.chat_outlined),
+                        ),
+                      ),
+                    if (mode != 'manual') const SizedBox(height: 12),
                     TextField(
                       controller: name,
                       decoration: const InputDecoration(
@@ -312,10 +331,16 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
                     onPressed: () => Navigator.of(context).pop(true),
                     icon: Icon(mode == 'whatsapp'
                         ? Icons.chat_outlined
-                        : Icons.send_outlined),
-                    label: Text(mode == 'whatsapp'
-                        ? 'Send WhatsApp invite'
-                        : 'Send invite'),
+                        : mode == 'manual'
+                            ? Icons.link_outlined
+                            : Icons.send_outlined),
+                    label: Text(mode == 'email'
+                        ? 'Send email invite'
+                        : mode == 'whatsapp'
+                            ? 'Send WhatsApp invite'
+                            : mode == 'manual'
+                                ? 'Generate link'
+                                : 'Send invite'),
                   )
                 ],
               ),
@@ -335,19 +360,27 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
               .showSnackBar(const SnackBar(content: Text('Invitation sent')));
         }
       } else {
-        if (phone.text.trim().isEmpty) return;
+        if (mode == 'email' && email.text.trim().isEmpty) return;
+        if (mode == 'whatsapp' && phone.text.trim().isEmpty) return;
         final data = await widget.apiClient.inviteExternal(
             planId: widget.planId,
-            phone: phone.text.trim(),
+            email: mode == 'email' ? email.text.trim() : null,
+            phone: mode == 'whatsapp' ? phone.text.trim() : null,
             name: name.text.trim(),
-            channel: 'whatsapp');
+            channel: mode);
         final link = _invitationLink(data);
-        if (link.isNotEmpty) {
+        if (mode == 'whatsapp' && link.isNotEmpty) {
           await _shareInvitationOnWhatsApp(link, phone.text.trim());
+        } else if (mode == 'manual' && link.isNotEmpty) {
+          await Clipboard.setData(ClipboardData(text: link));
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('WhatsApp invitation ready')));
+          final text = mode == 'manual'
+              ? 'Invitation link copied'
+              : mode == 'email'
+                  ? 'Email invitation sent'
+                  : 'WhatsApp invitation ready';
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
         }
       }
       await _refresh();
@@ -357,6 +390,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen> {
             .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
+      email.dispose();
       phone.dispose();
       name.dispose();
       search.dispose();

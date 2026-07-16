@@ -20,6 +20,7 @@ import memberRoutes from './routes/memberRoutes.js';
 import invitationRoutes from './routes/invitationRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import invitationLinkRoutes from './routes/invitationLinkRoutes.js';
+import { applySchemaPatches } from './utils/schemaPatches.js';
 
 // Import models to sync
 import './models/Associations.js';
@@ -203,6 +204,7 @@ const startServer = async () => {
     // Test database connection
     await sequelize.authenticate();
     console.log('✅ Database connected successfully');
+    await applySchemaPatches(sequelize);
     
     // Sync models (use { alter: true } in development, { force: false } in production)
     if (process.env.NODE_ENV === 'development') {

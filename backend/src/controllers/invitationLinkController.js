@@ -84,11 +84,12 @@ export const generateInvitationLink = async (req, res) => {
       });
     }
     
-    if (!normalizedEmail && !normalizedPhone) {
+    const inviteChannel = channel || (normalizedPhone ? 'whatsapp' : normalizedEmail ? 'email' : 'manual');
+    if (!normalizedEmail && !normalizedPhone && inviteChannel !== 'manual') {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        message: 'Enter an email address or WhatsApp phone number'
+        message: 'Enter an email address, WhatsApp phone number, or choose manual link'
       });
     }
     
@@ -177,14 +178,14 @@ export const generateInvitationLink = async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: normalizedPhone ? 'WhatsApp invitation link generated successfully' : 'Invitation link generated and email sent successfully',
+      message: inviteChannel === 'whatsapp' ? 'WhatsApp invitation link generated successfully' : inviteChannel === 'manual' ? 'Invitation link generated successfully' : 'Invitation link generated and email sent successfully',
       data: {
         invitation_link: invitationLink,
         invitation: {
           id: invitation.id,
           email: invitation.invited_email,
           phone: invitation.invited_phone,
-          channel: normalizedPhone ? 'whatsapp' : 'email',
+          channel: inviteChannel,
           expires_at: invitation.token_expires,
           status: invitation.status
         }

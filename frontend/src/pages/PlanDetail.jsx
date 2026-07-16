@@ -89,6 +89,7 @@ const PlanDetail = () => {
   const [searching, setSearching] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
+  const [inviteMode, setInviteMode] = useState('email');
   const [inviteName, setInviteName] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -350,28 +351,40 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
   }
 };
 
+  const openExternalInvite = (mode) => {
+    setInviteMode(mode);
+    setShowEmailInviteModal(true);
+  };
+
   const handleInviteByEmail = async (e) => {
   e.preventDefault();
-  if (!invitePhone.trim()) {
+  if (inviteMode === 'email' && !inviteEmail.trim()) {
+    showError(null, "Please enter an email address");
+    return;
+  }
+  if (inviteMode === 'whatsapp' && !invitePhone.trim()) {
     showError(null, "Please enter a WhatsApp phone number");
     return;
   }
   try {
     const response = await planService.inviteExternal(id, {
-      phone: invitePhone,
+      email: inviteMode === 'email' ? inviteEmail : undefined,
+      phone: inviteMode === 'whatsapp' ? invitePhone : undefined,
       name: inviteName,
-      channel: 'whatsapp',
+      channel: inviteMode,
     });
     const link = response.data.data.invitation_link;
     setGeneratedLink(link);
     setShowEmailInviteModal(false);
     setShowLinkModal(true);
     fetchPendingInvitations();
-    shareToWhatsApp(link, invitePhone);
+    if (inviteMode === 'whatsapp') {
+      shareToWhatsApp(link, invitePhone);
+    }
     setInviteEmail("");
     setInvitePhone("");
     setInviteName("");
-    toast.success("WhatsApp invitation link generated successfully!");
+    toast.success(inviteMode === 'email' ? "Email invitation sent successfully!" : inviteMode === 'whatsapp' ? "WhatsApp invitation link generated successfully!" : "Invitation link generated successfully!");
   } catch (error) {
     showError(error, "Error generating invitation link");
   }
@@ -381,9 +394,13 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
     navigator.clipboard.writeText(text);
     toast.success('Link copied to clipboard!');
   };
-  const shareToWhatsApp = (link) => {
+  const normalizeWhatsAppNumber = (value) => value.replace(/[^0-9]/g, '');
+
+  const shareToWhatsApp = (link, phone = '') => {
     const message = encodeURIComponent(`Join my SaveWise plan "${plan?.plan_name || ''}" using this link: ${link}`);
-    window.open(`https://wa.me/?text=${message}`, '_blank', 'noopener,noreferrer');
+    const number = normalizeWhatsAppNumber(phone);
+    const url = number ? `https://wa.me/${number}?text=${message}` : `https://wa.me/?text=${message}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const fetchPlanMessages = async () => {
@@ -1016,11 +1033,25 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                     Invite Existing User
                   </button>
                   <button
-                    onClick={() => setShowEmailInviteModal(true)}
+                    onClick={() => openExternalInvite('email')}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center"
                   >
+                    <FaEnvelope className="mr-2" />
+                    Email
+                  </button>
+                  <button
+                    onClick={() => openExternalInvite('whatsapp')}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center"
+                  >
                     <FaWhatsapp className="mr-2" />
-                    Invite by WhatsApp
+                    WhatsApp
+                  </button>
+                  <button
+                    onClick={() => openExternalInvite('manual')}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg flex items-center"
+                  >
+                    <FaLink className="mr-2" />
+                    Link
                   </button>
                 </div>
               )}
@@ -1106,13 +1137,13 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
               </div>
             )}
             
-            {/* WhatsApp Invite Modal */}
+            {/* External Invite Modal */}
             {showEmailInviteModal && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                 <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Invite by WhatsApp
+{inviteMode === 'email' ? 'Invite by Email' : inviteMode === 'whatsapp' ? 'Invite by WhatsApp' : 'Generate Invitation Link'}
                     </h3>
                     <button
                       onClick={() => setShowEmailInviteModal(false)}
@@ -1124,19 +1155,36 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                   
                   <form onSubmit={handleInviteByEmail}>
                     <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          WhatsApp Number *
-                        </label>
-                        <input
-                          type="tel"
-                          value={invitePhone}
-                          onChange={(e) => setInvitePhone(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          placeholder="260971234567"
-                          required
-                        />
-                      </div>
+                      {inviteMode === 'email' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Email Address *
+                          </label>
+                          <input
+                            type="email"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="user@example.com"
+                            required
+                          />
+                        </div>
+                      )}
+                      {inviteMode === 'whatsapp' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            WhatsApp Number *
+                          </label>
+                          <input
+                            type="tel"
+                            value={invitePhone}
+                            onChange={(e) => setInvitePhone(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="260971234567"
+                            required
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Name (Optional)
@@ -1163,7 +1211,7 @@ const hasPendingWithdrawal = withdrawals.some(w => w.user_id === user?.id && w.s
                         type="submit"
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                       >
-                        Send WhatsApp Invite
+{inviteMode === 'email' ? 'Send Email Invite' : inviteMode === 'whatsapp' ? 'Send WhatsApp Invite' : 'Generate Link'}
                       </button>
                     </div>
                   </form>
